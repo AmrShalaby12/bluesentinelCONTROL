@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlueSentinel Control</title>
+  <style>
+    :root {
+      --bg: #07131f;
+      --panel: #102538;
+      --panel-soft: #17324a;
+      --accent: #4cd9ff;
+      --accent-2: #9fffc9;
+      --text: #eef7ff;
+      --warn: #ffb454;
+      --danger: #ff6b6b;
+      --muted: #87a4bd;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(76, 217, 255, 0.18), transparent 25%),
+        radial-gradient(circle at bottom right, rgba(159, 255, 201, 0.12), transparent 28%),
+        linear-gradient(180deg, #08131d, #071a29 45%, #061018);
+      color: var(--text);
+      padding: 24px;
+    }
+
+    .layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero,
+    .panel {
+      background: rgba(16, 37, 56, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 22px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    .hero {
+      padding: 24px;
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .status-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(76, 217, 255, 0.12);
+      border: 1px solid rgba(76, 217, 255, 0.25);
+      min-width: 170px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 20px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      background: var(--panel-soft);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 8px;
+    }
+
+    .metric .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .motors {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .motor-card {
+      background: var(--panel-soft);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .bar {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 50%;
+      transform-origin: center;
+      background: linear-gradient(90deg, var(--danger), var(--warn), var(--accent), var(--accent-2));
+    }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(120deg, var(--accent), #2c7df7);
+      color: #00131e;
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    .hint {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 0.95rem;
+    }
+
+    .axis-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .axis-row {
+      display: grid;
+      grid-template-columns: 72px 1fr 56px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .axis-track {
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+
+    .axis-track span {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 50%;
+      left: 50%;
+      transform-origin: right center;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+
+    .footer {
+      color: var(--muted);
+      text-align: center;
+      padding-bottom: 10px;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 880px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <section class="hero">
+      <div>
+        <h1>BlueSentinel</h1>
+        <p>لوحة مراقبة وتحكم لمركب 4 مواتير بزاوية 45 درجة عبر نفس شبكة الواي فاي.</p>
+      </div>
+      <div id="connectionState" class="status-pill">جارٍ الاتصال...</div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>القراءات الحية</h2>
+        <div class="metrics">
+          <div class="metric">
+            <div class="label">درجة الحرارة</div>
+            <div class="value" id="tempValue">--</div>
+          </div>
+          <div class="metric">
+            <div class="label">pH</div>
+            <div class="value" id="phValue">--</div>
+          </div>
+          <div class="metric">
+            <div class="label">Roll</div>
+            <div class="value" id="rollValue">--</div>
+          </div>
+          <div class="metric">
+            <div class="label">Pitch</div>
+            <div class="value" id="pitchValue">--</div>
+          </div>
+          <div class="metric">
+            <div class="label">Yaw Rate</div>
+            <div class="value" id="yawRateValue">--</div>
+          </div>
+          <div class="metric">
+            <div class="label">IP</div>
+            <div class="value" id="ipValue">--</div>
+          </div>
+        </div>
+
+        <h2 style="margin-top: 18px;">قدرة كل موتور</h2>
+        <div class="motors">
+          <div class="motor-card">
+            <strong>Front Left</strong>
+            <div id="motor-frontLeft">0.00</div>
+            <div class="bar"><span id="bar-frontLeft"></span></div>
+          </div>
+          <div class="motor-card">
+            <strong>Front Right</strong>
+            <div id="motor-frontRight">0.00</div>
+            <div class="bar"><span id="bar-frontRight"></span></div>
+          </div>
+          <div class="motor-card">
+            <strong>Rear Left</strong>
+            <div id="motor-rearLeft">0.00</div>
+            <div class="bar"><span id="bar-rearLeft"></span></div>
+          </div>
+          <div class="motor-card">
+            <strong>Rear Right</strong>
+            <div id="motor-rearRight">0.00</div>
+            <div class="bar"><span id="bar-rearRight"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <section class="panel">
+          <h2>التحكم بالجويستيك</h2>
+          <button id="enableBtn">تفعيل الحركة</button>
+          <button id="stopBtn" class="secondary">إيقاف فوري</button>
+          <p class="hint">
+            افتح الصفحة من اللابتوب الموصل عليه الجويستيك، واضغط أي زر في اليد أولًا لو المتصفح لم يكتشفها.
+            الحركة الافتراضية: العصاية الشمال X للحركة يمين/شمال، العصاية الشمال Y للأمام/الخلف،
+            والعصاية اليمين X للدوران.
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2>محاور الجويستيك</h2>
+          <div class="axis-list">
+            <div class="axis-row">
+              <div>Strafe</div>
+              <div class="axis-track"><span id="axisX"></span></div>
+              <div id="axisXValue">0.00</div>
+            </div>
+            <div class="axis-row">
+              <div>Surge</div>
+              <div class="axis-track"><span id="axisY"></span></div>
+              <div id="axisYValue">0.00</div>
+            </div>
+            <div class="axis-row">
+              <div>Yaw</div>
+              <div class="axis-track"><span id="axisYaw"></span></div>
+              <div id="axisYawValue">0.00</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>تشخيص</h2>
+          <div class="hint" id="diagText">في انتظار بيانات اللوحة...</div>
+        </section>
+      </div>
+    </section>
+
+    <div class="footer">لو فصلت الصفحة أو توقفت رسائل الجويستيك، المركبة ستقف تلقائيًا.</div>
+  </main>
+
+  <script>
+    let socket;
+    let driveEnabled = false;
+    let telemetry = {};
+    let config = {
+      axisStrafe: 0,
+      axisSurge: 1,
+      axisYaw: 2
+    };
+
+    const connectionState = document.getElementById("connectionState");
+    const diagText = document.getElementById("diagText");
+    const enableBtn = document.getElementById("enableBtn");
+    const stopBtn = document.getElementById("stopBtn");
+
+    async function loadConfig() {
+      try {
+        const response = await fetch("/api/config");
+        config = await response.json();
+      } catch (error) {
+        console.error("config fetch failed", error);
+      }
+    }
+
+    function setStatus(text, connected) {
+      connectionState.textContent = text;
+      connectionState.style.background = connected
+        ? "rgba(159, 255, 201, 0.14)"
+        : "rgba(255, 107, 107, 0.14)";
+      connectionState.style.borderColor = connected
+        ? "rgba(159, 255, 201, 0.28)"
+        : "rgba(255, 107, 107, 0.28)";
+    }
+
+    function connectSocket() {
+      const protocol = location.protocol === "https:" ? "wss" : "ws";
+      socket = new WebSocket(`${protocol}://${location.hostname}:81/`);
+
+      socket.addEventListener("open", () => setStatus("متصل باللوحة", true));
+      socket.addEventListener("close", () => {
+        setStatus("الاتصال مفصول", false);
+        driveEnabled = false;
+        setTimeout(connectSocket, 1200);
+      });
+      socket.addEventListener("message", event => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "telemetry") {
+            telemetry = data;
+            renderTelemetry();
+          }
+        } catch (error) {
+          console.error("bad message", error);
+        }
+      });
+    }
+
+    function updateAxisBar(id, value) {
+      const bar = document.getElementById(id);
+      const magnitude = Math.min(1, Math.abs(value));
+      bar.style.left = value >= 0 ? "50%" : "0";
+      bar.style.transformOrigin = value >= 0 ? "left center" : "right center";
+      bar.style.transform = `scaleX(${magnitude})`;
+    }
+
+    function updateMotor(name, value) {
+      document.getElementById(`motor-${name}`).textContent = value.toFixed(2);
+      updateAxisBar(`bar-${name}`, value);
+    }
+
+    function safe(value, digits = 2, suffix = "") {
+      if (value === null || value === undefined || Number.isNaN(value)) {
+        return "--";
+      }
+      return `${Number(value).toFixed(digits)}${suffix}`;
+    }
+
+    function renderTelemetry() {
+      document.getElementById("tempValue").textContent = safe(telemetry.tempC, 1, " C");
+      document.getElementById("phValue").textContent = safe(telemetry.ph, 2);
+      document.getElementById("rollValue").textContent = safe(telemetry.roll, 1, "°");
+      document.getElementById("pitchValue").textContent = safe(telemetry.pitch, 1, "°");
+      document.getElementById("yawRateValue").textContent = safe(telemetry.yawRate, 1, "°/s");
+      document.getElementById("ipValue").textContent = telemetry.ip || "--";
+
+      if (telemetry.motors) {
+        updateMotor("frontLeft", telemetry.motors.frontLeft || 0);
+        updateMotor("frontRight", telemetry.motors.frontRight || 0);
+        updateMotor("rearLeft", telemetry.motors.rearLeft || 0);
+        updateMotor("rearRight", telemetry.motors.rearRight || 0);
+      }
+
+      diagText.textContent =
+        `Mode: ${telemetry.mode || "--"} | RSSI: ${telemetry.rssi ?? "--"} | ` +
+        `Motors enabled: ${telemetry.enabled ? "YES" : "NO"}`;
+    }
+
+    function getGamepad() {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      return Array.from(pads).find(Boolean);
+    }
+
+    function axisValue(gamepad, index) {
+      if (!gamepad || !gamepad.axes || index >= gamepad.axes.length) {
+        return 0;
+      }
+      return Number(gamepad.axes[index] || 0);
+    }
+
+    function sendDrive(x, y, yaw) {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      socket.send(JSON.stringify({
+        type: "drive",
+        x,
+        y,
+        yaw,
+        enabled: driveEnabled,
+        heartbeat: true
+      }));
+    }
+
+    function pollGamepad() {
+      const pad = getGamepad();
+      let x = 0;
+      let y = 0;
+      let yaw = 0;
+
+      if (pad) {
+        x = axisValue(pad, config.axisStrafe);
+        y = -axisValue(pad, config.axisSurge);
+        yaw = axisValue(pad, config.axisYaw);
+      }
+
+      document.getElementById("axisXValue").textContent = x.toFixed(2);
+      document.getElementById("axisYValue").textContent = y.toFixed(2);
+      document.getElementById("axisYawValue").textContent = yaw.toFixed(2);
+      updateAxisBar("axisX", x);
+      updateAxisBar("axisY", y);
+      updateAxisBar("axisYaw", yaw);
+
+      sendDrive(x, y, yaw);
+      requestAnimationFrame(pollGamepad);
+    }
+
+    enableBtn.addEventListener("click", () => {
+      driveEnabled = !driveEnabled;
+      enableBtn.textContent = driveEnabled ? "إلغاء التفعيل" : "تفعيل الحركة";
+      enableBtn.style.background = driveEnabled
+        ? "linear-gradient(120deg, #ffb454, #ff6b6b)"
+        : "linear-gradient(120deg, #4cd9ff, #2c7df7)";
+    });
+
+    stopBtn.addEventListener("click", () => {
+      driveEnabled = false;
+      enableBtn.textContent = "تفعيل الحركة";
+      sendDrive(0, 0, 0);
+    });
+
+    window.addEventListener("gamepadconnected", event => {
+      diagText.textContent = `تم اكتشاف الجويستيك: ${event.gamepad.id}`;
+    });
+
+    window.addEventListener("beforeunload", () => {
+      driveEnabled = false;
+      sendDrive(0, 0, 0);
+    });
+
+    loadConfig().then(() => {
+      connectSocket();
+      pollGamepad();
+    });
+  </script>
+</body>
+</html>
