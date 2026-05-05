@@ -1,23 +1,26 @@
 # BlueSentinel
 
-نظام تحكم كامل لمركبة سطحية صغيرة تعمل بـ `ESP32` و4 مواتير مركبة بزاوية `45°`، مع:
+BlueSentinel is an `ESP32`-based control system for a small surface vehicle that uses four thrusters mounted at `45 degrees` in an `X-drive` layout.
 
-- `LCD I2C`
-- `MPU6050 IMU`
-- حساس حرارة ماء `DS18B20`
-- حساس `pH analog`
-- لوحة تحكم عبر الواي فاي من اللابتوب
-- قراءة الجويستيك من المتصفح نفسه ثم إرسال أوامر الحركة للـ `ESP32`
+It includes:
 
-## 1. الفكرة العامة
+- `ESP32` main controller
+- `LCD I2C` display
+- `MPU6050` IMU
+- `DS18B20` water temperature sensor
+- `Analog pH` sensor
+- Browser dashboard over Wi-Fi
+- Laptop joystick control over the same network
 
-المشروع مبني على مفهوم `X-Drive`:
+## Overview
 
-- أمام/خلف: كل المواتير تدفع معًا.
-- يمين/شمال: مجموعتان تدفعان باتجاهات مختلفة.
-- دوران: كل ناحية تعاكس الأخرى.
+The project is built around a four-thruster `X-drive` mixer:
 
-المعادلات داخل الكود:
+- Forward/backward: all thrusters contribute together
+- Left/right strafing: opposite thrust components are mixed across the vehicle
+- Rotation: left and right sides counter each other
+
+Motor mixing used in the firmware:
 
 ```text
 FL = surge + strafe + yaw
@@ -26,33 +29,59 @@ RL = surge - strafe + yaw
 RR = surge + strafe - yaw
 ```
 
-لو اتجاه أي موتور طلع عكسي، لا تغيّر الخلط نفسه. فقط غيّر قيمة الـ `INVERT_*` في [include/config.h](/d:/projects_2026/bluesentinel/include/config.h).
+If any motor direction is reversed, do not change the mixer math. Just change the corresponding `INVERT_*` flag in [include/config.h](include/config.h).
 
-## 2. افتراضات مهمة قبل التوصيل
+## Important Assumptions
 
-هذا الكود يفترض أن كل موتور متصل على:
+This firmware assumes each motor is connected to one of the following:
 
-- `Reversible ESC` لو المواتير `BLDC`
-- أو درايفر يسمح بالحركة للأمام والخلف مع إشارة `RC PWM`
+- A `reversible ESC` for `BLDC` thrusters
+- A motor driver that accepts `RC PWM` style control for both forward and reverse
 
-هذا مهم جدًا، لأن مركبة 4 مواتير بزاوية `45°` تحتاج دفعًا موجبًا وسالبًا.  
-إذا كان الـ `ESC` أمامي فقط بدون عكس، فلن تحصل على نفس حرية الحركة.
+This is important because a `45 degree` four-thruster surface vehicle needs positive and negative thrust to move correctly in all directions.
 
-## 3. التوصيلات على ESP32 DevKit 33-pin
- 
-### تغذية مهمة
+## Hardware Wiring
 
-- لا تغذّي المواتير من `ESP32`.
-- لازم أرضي `GND` مشترك بين `ESP32` وكل الـ `ESC` أو الدرايفرات.
-- الحساسات تعمل على `3.3V` أو حسب الموديول المستخدم.
-- بعض لوحات `pH` تحتاج `5V` تغذية لكن خرجها للإشارة يجب التأكد أنه آمن على `ESP32` أو يمر على مقسم جهد/دائرة مناسبة.
+### ESP32 DevKit 33-pin connections
 
-## 4. ترتيب المواتير على المركبة
+#### I2C devices
 
-عند النظر من أعلى:
+| Device | ESP32 Pin | Notes |
+|---|---:|---|
+| `LCD SDA` | `GPIO21` | I2C bus |
+| `LCD SCL` | `GPIO22` | I2C bus |
+| `MPU6050 SDA` | `GPIO21` | Shared I2C bus |
+| `MPU6050 SCL` | `GPIO22` | Shared I2C bus |
+
+#### Sensors
+
+| Device | ESP32 Pin | Notes |
+|---|---:|---|
+| `DS18B20 DATA` | `GPIO13` | Use a `4.7k` pull-up resistor to `3.3V` |
+| `pH analog OUT` | `GPIO34` | `ADC1` input, safe to use while Wi-Fi is enabled |
+
+#### Motor control outputs
+
+| Thruster | ESP32 Pin |
+|---|---:|
+| Front Left | `GPIO25` |
+| Front Right | `GPIO26` |
+| Rear Left | `GPIO27` |
+| Rear Right | `GPIO14` |
+
+### Power notes
+
+- Do not power the motors from the `ESP32`
+- Use a common `GND` between the `ESP32` and all `ESCs` or motor drivers
+- Verify your sensor supply voltage requirements before wiring
+- Some pH boards use `5V` supply, but the signal going to the `ESP32` must still be safe for `3.3V` logic
+
+## Thruster Layout
+
+Top view:
 
 ```text
-        مقدمة
+        Front
 
    FL             FR
     \             /
@@ -63,107 +92,105 @@ RR = surge + strafe - yaw
     /             \
    RL             RR
 
-        مؤخرة
+        Rear
 ```
 
-الزوايا هنا تمثل أن كل موتور دافع عند `45°` بالنسبة لمحور المركبة.
+Each thruster is mounted at `45 degrees` relative to the vehicle body.
 
-## 5. الملفات الأساسية
+## Project Files
 
-- الكود الرئيسي: [src/main.cpp](/d:/projects_2026/bluesentinel/src/main.cpp)
-- الإعدادات والبنات: [include/config.h](/d:/projects_2026/bluesentinel/include/config.h)
-- صفحة التحكم: [data/index.html](/d:/projects_2026/bluesentinel/data/index.html)
-- إعداد الشبكة: [include/secrets.example.h](/d:/projects_2026/bluesentinel/include/secrets.example.h)
+- Main firmware: [src/main.cpp](src/main.cpp)
+- Pin map and tuning: [include/config.h](include/config.h)
+- Example Wi-Fi config: [include/secrets.example.h](include/secrets.example.h)
+- Web dashboard: [data/index.html](data/index.html)
+- PlatformIO config: [platformio.ini](platformio.ini)
 
-## 6. ضبط الواي فاي
+## Wi-Fi Setup
 
-انسخ:
+Copy:
 
 ```text
 include/secrets.example.h -> include/secrets.h
 ```
 
-ثم ضع اسم الشبكة والباسورد.
+Then edit `include/secrets.h` and set your actual Wi-Fi credentials.
 
-لو لم تضع بيانات واي فاي أو فشل الاتصال:
+If no Wi-Fi credentials are provided, or station mode fails, the `ESP32` starts its own access point:
 
-- الـ `ESP32` سيشغّل `Access Point`
-- الاسم: `BlueSentinel-Setup`
-- الباسورد: `BlueWater2026`
+- SSID: `BlueSentinel-Setup`
+- Password: `BlueWater2026`
 
-بعدها افتح من اللابتوب:
+In AP mode, open:
 
 ```text
 http://192.168.4.1
 ```
 
-ولو اتصل بالشبكة المنزلية بنجاح:
+If the board connects successfully to your router:
 
-- افتح الـ `IP` الظاهر على الـ `LCD`
-- أو جرّب `http://BlueSentinel.local`
+- Open the IP address shown on the LCD
+- Or try `http://BlueSentinel.local`
 
-## 7. طريقة تشغيل الجويستيك
+## Joystick Control From Laptop
 
-1. افتح صفحة التحكم من اللابتوب الموصل عليه الجويستيك.
-2. اسمح للمتصفح بقراءة الـ `Gamepad` إن احتاج.
-3. اضغط زر `تفعيل الحركة`.
-4. التحكم الافتراضي:
-   - `Left Stick X`: يمين/شمال
-   - `Left Stick Y`: أمام/خلف
-   - `Right Stick X`: دوران
+1. Connect the laptop to the same Wi-Fi network as the `ESP32`
+2. Connect the joystick/gamepad to the laptop
+3. Open the dashboard in a browser using the board IP
+4. Press any gamepad button once if the browser does not detect it immediately
+5. Press `Enable Motion` on the page
 
-الصفحة تقرأ الجويستيك مباشرة من المتصفح وتبعث الأوامر بـ `WebSocket`.
+Default joystick mapping:
 
-## 8. الأمان الموجود في الكود
+- `Left Stick X`: strafe left/right
+- `Left Stick Y`: forward/backward
+- `Right Stick X`: yaw / rotate
 
-- لو انقطعت أوامر الجويستيك أكثر من `600 ms`، كل المواتير تتوقف تلقائيًا.
-- عند غلق الصفحة أو فصل الـ `WebSocket`، يتم إيقاف الحركة.
-- عند الإقلاع، الكود يرسل `Neutral` للمواتير لمدة `3` ثوانٍ لعمل `arming` للـ `ESC`.
+The browser reads the joystick locally and sends commands to the `ESP32` over `WebSocket`.
 
-## 9. الشاشة LCD تعرض ماذا؟
+## Safety Features
 
-الـ `LCD` تبدّل بين شاشتين:
+- If joystick commands stop for more than `600 ms`, all motors stop automatically
+- If the web page closes or the socket disconnects, motion is disabled
+- On startup, the firmware sends `neutral` to all ESCs for `3 seconds` to allow arming
 
-- الحرارة و `pH` و `Roll/Pitch`
-- عنوان الـ `IP` وحالة التفعيل
+## LCD Display
 
-## 10. المعايرة المطلوبة
+The LCD rotates between two screens:
 
-### `pH`
+- Temperature, pH, roll, and pitch
+- Current IP address and control state
 
-في [include/config.h](/d:/projects_2026/bluesentinel/include/config.h) ستجد:
+## Calibration
+
+### pH sensor
+
+Tune these values in [include/config.h](include/config.h):
 
 - `PH_NEUTRAL_VOLTAGE`
 - `PH_VOLTS_PER_PH`
 
-ابدأ بهما كما هما، ثم عاير باستخدام محاليل `pH 7` و `pH 4` أو `pH 10`.
+Start with the default values, then calibrate using real buffer solutions such as `pH 7`, `pH 4`, or `pH 10`.
 
-### اتجاهات المواتير
+### Motor direction
 
-إذا كانت حركة:
-
-- الأمام تعطي دوران
-- أو اليمين/الشمال عكس المتوقع
-
-عدّل فقط:
+If forward motion causes rotation, or left/right movement is reversed, only change:
 
 - `INVERT_FRONT_LEFT`
 - `INVERT_FRONT_RIGHT`
 - `INVERT_REAR_LEFT`
 - `INVERT_REAR_RIGHT`
 
-## 11. رفع الكود
+## Uploading the Firmware
 
-### تثبيت PlatformIO
+### Using VS Code + PlatformIO
 
-إذا كنت تستخدم `VS Code`:
+1. Install the `PlatformIO` extension
+2. Open this project folder
+3. Run `Build`
+4. Run `Upload`
+5. Run `Upload Filesystem Image`
 
-- ثبّت إضافة `PlatformIO`
-- افتح المجلد
-- نفّذ `Build`
-- ثم `Upload`
-
-### أو من الطرفية
+### Using terminal
 
 ```bash
 pio run
@@ -171,13 +198,14 @@ pio run --target upload
 pio run --target uploadfs
 ```
 
-`uploadfs` مهم لرفع صفحة الويب الموجودة داخل `data/`.
+The `uploadfs` step is required because the control dashboard is stored in `data/`.
 
-## 12. المكتبات المستخدمة
+## Libraries Used
 
-مذكورة في [platformio.ini](/d:/projects_2026/bluesentinel/platformio.ini):
+Configured in [platformio.ini](platformio.ini):
 
 - `Adafruit MPU6050`
+- `Adafruit Unified Sensor`
 - `ArduinoJson`
 - `WebSockets`
 - `ESP32Servo`
@@ -185,18 +213,18 @@ pio run --target uploadfs
 - `OneWire`
 - `LiquidCrystal_I2C`
 
-## 13. ملاحظات عملية جدًا
+## Practical Notes
 
-- `GPIO34` دخل فقط: ممتاز لحساس `pH`.
-- تجنب `ADC2` مع الواي فاي على `ESP32`.
-- لو الشاشة لم تعمل، جرّب تغيير عنوانها من `0x27` إلى `0x3F`.
-- لو محور الدوران في يد التحكم مختلف، عدّل رقم `AXIS_YAW` في [include/config.h](/d:/projects_2026/bluesentinel/include/config.h).
-- لو `IMU` لديك ليس `MPU6050` بل نوع آخر، سنحتاج تبديل درايفره في الكود.
+- `GPIO34` is input-only, which makes it a good pH analog input
+- Avoid using `ADC2` for analog sensors while Wi-Fi is active on `ESP32`
+- If the LCD does not respond, try changing the I2C address from `0x27` to `0x3F`
+- If your joystick uses a different axis layout, update `AXIS_YAW`, `AXIS_STRAFE`, or `AXIS_SURGE` in [include/config.h](include/config.h)
+- If your IMU is not `MPU6050`, the driver section in the firmware must be changed
 
-## 14. أول اختبار على الطاولة
+## First Bench Test
 
-1. شغّل اللوحة فقط بدون تركيب المراوح في الماء.
-2. تأكد أن صفحة الويب تعرض `temp / pH / roll / pitch`.
-3. فعّل الحركة وحرك العصا قليلًا.
-4. راقب قيم المواتير في الواجهة.
-5. بعد التأكد من الاتجاهات، ابدأ اختبارًا داخل حوض أو مكان آمن.
+1. Power the board without testing in water yet
+2. Confirm the dashboard shows temperature, pH, roll, and pitch data
+3. Enable motion and move the joystick slightly
+4. Watch the per-motor output values on the dashboard
+5. Verify motor directions before moving to a safe water test
